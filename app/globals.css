@@ -4,9 +4,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+  Duka POS — "The Ledger" design system.
+  Single source of truth for color/type/radius. To retheme the whole app,
+  edit the RAW PALETTE block below — never a semantic token directly.
+  See Design.md for the full rationale.
+*/
+
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-display: var(--font-display);
+    --font-heading: var(--font-display);
     --font-sans: var(--font-sans);
+    --font-mono: var(--font-figures);
+    --font-figures: var(--font-figures);
+
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -15,15 +26,24 @@
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
+    --color-sidebar-muted: var(--sidebar-muted);
+    --color-sidebar-active-rule: var(--sidebar-active-rule);
+
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -38,92 +58,211 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
-}
 
-:root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.148 0.004 228.8);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.148 0.004 228.8);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.148 0.004 228.8);
-    --primary: oklch(0.218 0.008 223.9);
-    --primary-foreground: oklch(0.987 0.002 197.1);
-    --secondary: oklch(0.963 0.002 197.1);
-    --secondary-foreground: oklch(0.218 0.008 223.9);
-    --muted: oklch(0.963 0.002 197.1);
-    --muted-foreground: oklch(0.56 0.021 213.5);
-    --accent: oklch(0.963 0.002 197.1);
-    --accent-foreground: oklch(0.218 0.008 223.9);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.925 0.005 214.3);
-    --input: oklch(0.925 0.005 214.3);
-    --ring: oklch(0.723 0.014 214.4);
-    --chart-1: oklch(0.872 0.007 219.6);
-    --chart-2: oklch(0.56 0.021 213.5);
-    --chart-3: oklch(0.45 0.017 213.2);
-    --chart-4: oklch(0.378 0.015 216);
-    --chart-5: oklch(0.275 0.011 216.9);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.987 0.002 197.1);
-    --sidebar-foreground: oklch(0.148 0.004 228.8);
-    --sidebar-primary: oklch(0.218 0.008 223.9);
-    --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
-    --sidebar-accent: oklch(0.963 0.002 197.1);
-    --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-    --sidebar-border: oklch(0.925 0.005 214.3);
-    --sidebar-ring: oklch(0.723 0.014 214.4);
-}
+    /* Raw blue scale exposed as utilities (bg-blue-600, text-blue-900 ...) */
+    --color-blue-50: var(--blue-50);
+    --color-blue-100: var(--blue-100);
+    --color-blue-200: var(--blue-200);
+    --color-blue-300: var(--blue-300);
+    --color-blue-400: var(--blue-400);
+    --color-blue-500: var(--blue-500);
+    --color-blue-600: var(--blue-600);
+    --color-blue-700: var(--blue-700);
+    --color-blue-800: var(--blue-800);
+    --color-blue-900: var(--blue-900);
 
-.dark {
-    --background: oklch(0.148 0.004 228.8);
-    --foreground: oklch(0.987 0.002 197.1);
-    --card: oklch(0.218 0.008 223.9);
-    --card-foreground: oklch(0.987 0.002 197.1);
-    --popover: oklch(0.218 0.008 223.9);
-    --popover-foreground: oklch(0.987 0.002 197.1);
-    --primary: oklch(0.925 0.005 214.3);
-    --primary-foreground: oklch(0.218 0.008 223.9);
-    --secondary: oklch(0.275 0.011 216.9);
-    --secondary-foreground: oklch(0.987 0.002 197.1);
-    --muted: oklch(0.275 0.011 216.9);
-    --muted-foreground: oklch(0.723 0.014 214.4);
-    --accent: oklch(0.275 0.011 216.9);
-    --accent-foreground: oklch(0.987 0.002 197.1);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.56 0.021 213.5);
-    --chart-1: oklch(0.872 0.007 219.6);
-    --chart-2: oklch(0.56 0.021 213.5);
-    --chart-3: oklch(0.45 0.017 213.2);
-    --chart-4: oklch(0.378 0.015 216);
-    --chart-5: oklch(0.275 0.011 216.9);
-    --sidebar: oklch(0.218 0.008 223.9);
-    --sidebar-foreground: oklch(0.987 0.002 197.1);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
-    --sidebar-accent: oklch(0.275 0.011 216.9);
-    --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.56 0.021 213.5);
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 1.75rem;
+    --radius-4xl: 0.75rem;
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    :root {
+        /* ---- 1. RAW PALETTE — change these to retheme the whole app ---- */
+        --blue-50: hsl(224 82% 96%);
+        --blue-100: hsl(221 82% 92%);
+        --blue-200: hsl(219 83% 85%);
+        --blue-300: hsl(218 84% 76%);
+        --blue-400: hsl(217 82% 65%);
+        --blue-500: hsl(219 76% 57%);
+        --blue-600: hsl(221 78% 47%); /* brand primary */
+        --blue-700: hsl(222 79% 36%);
+        --blue-800: hsl(221 78% 28%);
+        --blue-900: hsl(213 64% 12%);
+
+        --slate-50: hsl(216 38% 97%);
+        --slate-100: hsl(214 30% 94%);
+        --slate-200: hsl(214 32% 91%);
+        --slate-300: hsl(216 24% 82%);
+        --slate-400: hsl(215 18% 65%);
+        --slate-500: hsl(215 17% 47%);
+        --slate-600: hsl(214 27% 34%);
+        --slate-700: hsl(216 30% 24%);
+        --slate-800: hsl(217 30% 16%);
+        --slate-900: hsl(220 30% 10%);
+
+        --success: hsl(156 76% 27%);
+        --success-foreground: hsl(0 0% 100%);
+        --warning: hsl(38 84% 37%);
+        --warning-foreground: hsl(0 0% 100%);
+        --destructive-raw: hsl(4 63% 47%);
+
+        /* ---- 2. ACCENT INTENSITY — data-accent on <html> ---- */
+        --accent-soft: var(--blue-500);
+        --accent-standard: var(--blue-600);
+        --accent-bold: var(--blue-700);
+        --accent-active: var(--accent-standard);
+
+        /* ---- 3. SEMANTIC TOKENS (shadcn contract) — light mode ---- */
+        --background: var(--slate-50);
+        --foreground: var(--slate-700);
+
+        --card: hsl(0 0% 100%);
+        --card-foreground: var(--slate-700);
+
+        --popover: hsl(0 0% 100%);
+        --popover-foreground: var(--slate-700);
+
+        --primary: var(--accent-active);
+        --primary-foreground: hsl(0 0% 100%);
+
+        --secondary: var(--slate-100);
+        --secondary-foreground: var(--slate-700);
+
+        --muted: var(--slate-100);
+        --muted-foreground: var(--slate-500);
+
+        --accent: var(--blue-50);
+        --accent-foreground: var(--blue-700);
+
+        --destructive: var(--destructive-raw);
+        --destructive-foreground: hsl(0 0% 100%);
+
+        --border: var(--slate-200);
+        --input: var(--slate-200);
+        --ring: var(--accent-active);
+
+        --chart-1: var(--blue-600);
+        --chart-2: var(--blue-300);
+        --chart-3: var(--success);
+        --chart-4: var(--warning);
+        --chart-5: var(--slate-400);
+
+        --radius: 0.75rem;
+
+        /* ---- Sidebar (dark blue rail) ---- */
+        --sidebar: var(--blue-900);
+        --sidebar-foreground: hsl(0 0% 100%);
+        --sidebar-muted: var(--blue-200);
+        --sidebar-active-rule: var(--blue-400);
+        --sidebar-primary: var(--blue-400);
+        --sidebar-primary-foreground: hsl(0 0% 100%);
+        --sidebar-accent: var(--blue-800);
+        --sidebar-accent-foreground: hsl(0 0% 100%);
+        --sidebar-border: var(--blue-800);
+        --sidebar-ring: var(--blue-400);
+
+        /* ---- Density — data-density on <html> ---- */
+        --space-unit: 1rem;
     }
-  body {
-    @apply bg-background text-foreground;
+
+    [data-density="compact"] {
+        --space-unit: 0.75rem;
     }
-  html {
-    @apply font-sans;
+
+    [data-accent="soft"] {
+        --accent-active: var(--accent-soft);
+    }
+    [data-accent="bold"] {
+        --accent-active: var(--accent-bold);
+    }
+
+    /* ---- Dark mode ---- */
+    .dark {
+        --background: var(--slate-900);
+        --foreground: var(--slate-100);
+
+        --card: var(--slate-800);
+        --card-foreground: var(--slate-100);
+
+        --popover: var(--slate-800);
+        --popover-foreground: var(--slate-100);
+
+        --primary: var(--blue-400);
+        --primary-foreground: var(--slate-900);
+
+        --secondary: var(--slate-700);
+        --secondary-foreground: var(--slate-100);
+
+        --muted: var(--slate-700);
+        --muted-foreground: var(--slate-400);
+
+        --accent: var(--blue-800);
+        --accent-foreground: var(--blue-100);
+
+        --destructive: hsl(4 70% 58%);
+        --destructive-foreground: hsl(0 0% 100%);
+
+        --border: var(--slate-700);
+        --input: var(--slate-700);
+        --ring: var(--blue-400);
+
+        --sidebar: hsl(220 30% 6%);
+        --sidebar-foreground: hsl(0 0% 100%);
+        --sidebar-muted: var(--slate-400);
+        --sidebar-active-rule: var(--blue-400);
+        --sidebar-accent: var(--slate-800);
+        --sidebar-accent-foreground: hsl(0 0% 100%);
+        --sidebar-border: var(--slate-800);
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-sans), "Inter", ui-sans-serif, system-ui, sans-serif;
+    }
+    html {
+        @apply font-sans;
+    }
+    h1,
+    h2,
+    h3,
+    h4,
+    .font-display {
+        font-family: var(--font-display), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    }
+    .font-figures {
+        font-family: var(--font-figures), "JetBrains Mono", ui-monospace, monospace;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
+    }
+}
+
+@layer utilities {
+    /* The Ledger Rule — the signature device. Used in exactly three places:
+       under the active sidebar item, above every Total row, and the top edge
+       of every Dashboard KPI card. */
+    .ledger-rule-top {
+        border-top: 1px solid var(--blue-600);
+    }
+    .ledger-rule-active {
+        border-left: 2px solid var(--sidebar-active-rule);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
     }
 }
