@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Search01Icon,
@@ -11,15 +10,17 @@ import {
   ShoppingCart01Icon,
   CheckmarkCircle02Icon,
   Download01Icon,
+  Loading03Icon,
+  SmartPhone01Icon,
 } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
 
-import { createSale, type CreateSaleResult } from "@/actions/sales"
 import { formatCents } from "@/lib/money"
 import { paymentMethodValues } from "@/lib/validations"
 import type { ProductRow } from "@/lib/queries"
+import { usePosCart, type MpesaRequestState } from "@/hooks/use-pos-cart"
 import { ProductImage } from "@/components/products/product-image"
 import { PinSwitchDialog } from "@/components/pos/pin-switch-dialog"
+import { PosVoiceTools } from "@/components/pos/pos-voice-tools"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -43,7 +44,6 @@ import { cn } from "@/lib/utils"
 
 type Customer = { id: string; name: string }
 type Cashier = { id: string; name: string }
-type CartLine = { product: ProductRow; qty: number }
 
 const PAYMENT_LABELS: Record<string, string> = { cash: "Cash", mpesa: "M-Pesa", card: "Card" }
 
@@ -62,16 +62,35 @@ export function PosTerminal({
   activeCashierName: string
   currency: string
 }) {
-  const router = useRouter()
   const [query, setQuery] = React.useState("")
   const [activeCat, setActiveCat] = React.useState<string>("all")
-  const [cart, setCart] = React.useState<Map<string, CartLine>>(new Map())
-  const [customerId, setCustomerId] = React.useState<string>("walk-in")
-  const [paymentMethod, setPaymentMethod] = React.useState<string>("cash")
-  const [paymentReference, setPaymentReference] = React.useState("")
-  const [discount, setDiscount] = React.useState("")
-  const [isPending, startTransition] = React.useTransition()
-  const [done, setDone] = React.useState<CreateSaleResult | null>(null)
+  const posCart = usePosCart(products)
+  const {
+    lines,
+    customerId,
+    setCustomerId,
+    paymentMethod,
+    setPaymentMethod,
+    paymentReference,
+    setPaymentReference,
+    discount,
+    setDiscount,
+    subtotalCents,
+    taxCents,
+    grandTotalCents,
+    isPending,
+    done,
+    setDone,
+    addToCart,
+    setQty,
+    complete,
+    mpesaPhone,
+    setMpesaPhone,
+    mpesaRequest,
+    isSendingMpesa,
+    sendMpesaRequest,
+    checkMpesaStatus,
+  } = posCart
 
   const filtered = products.filter((p) => {
     const matchesCat = activeCat === "all" || p.categoryId === activeCat
@@ -83,82 +102,9 @@ export function PosTerminal({
     return matchesCat && matchesQuery
   })
 
-  function addToCart(p: ProductRow) {
-    if (p.quantityOnHand <= 0) {
-      toast.error(`${p.name} is out of stock`)
-      return
-    }
-    setCart((prev) => {
-      const next = new Map(prev)
-      const existing = next.get(p.id)
-      const qty = existing ? existing.qty + 1 : 1
-      if (qty > p.quantityOnHand) {
-        toast.error(`Only ${p.quantityOnHand} of ${p.name} in stock`)
-        return prev
-      }
-      next.set(p.id, { product: p, qty })
-      return next
-    })
-  }
-
-  function setQty(productId: string, qty: number) {
-    setCart((prev) => {
-      const next = new Map(prev)
-      const line = next.get(productId)
-      if (!line) return prev
-      if (qty <= 0) {
-        next.delete(productId)
-      } else if (qty <= line.product.quantityOnHand) {
-        next.set(productId, { ...line, qty })
-      } else {
-        toast.error(`Only ${line.product.quantityOnHand} in stock`)
-      }
-      return next
-    })
-  }
-
-  const lines = Array.from(cart.values())
-  const subtotalCents = lines.reduce((s, l) => s + l.product.priceCents * l.qty, 0)
-  const taxCents = lines.reduce(
-    (s, l) => s + Math.round((l.product.priceCents * l.qty * Number(l.product.taxRate)) / 100),
-    0
-  )
-  const discountCents = Math.max(0, Math.round(Number(discount || "0") * 100))
-  const grandTotalCents = Math.max(0, subtotalCents + taxCents - discountCents)
-
-  function reset() {
-    setCart(new Map())
-    setCustomerId("walk-in")
-    setPaymentMethod("cash")
-    setPaymentReference("")
-    setDiscount("")
-  }
-
-  function complete() {
-    if (lines.length === 0) {
-      toast.error("Cart is empty")
-      return
-    }
-    startTransition(async () => {
-      const res = await createSale({
-        items: lines.map((l) => ({ productId: l.product.id, quantity: l.qty })),
-        customerId: customerId === "walk-in" ? null : customerId,
-        paymentMethod,
-        paymentReference,
-        discountCents,
-      })
-      if (res.ok) {
-        setDone(res.data)
-        reset()
-        router.refresh()
-      } else {
-        toast.error(res.error)
-      }
-    })
-  }
-
   return (
     <div className="grid h-[calc(100svh-8rem)] grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
+      <PosVoiceTools posCart={posCart} products={products} currency={currency} />
       {/* ---- Product grid ---- */}
       <div className="flex min-h-0 flex-col">
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -328,9 +274,9 @@ export function PosTerminal({
             </div>
           </div>
 
-          {paymentMethod !== "cash" && (
+          {paymentMethod === "card" && (
             <Input
-              placeholder={paymentMethod === "mpesa" ? "M-Pesa code" : "Card reference"}
+              placeholder="Card reference"
               className="h-8 font-figures text-sm"
               value={paymentReference}
               onChange={(e) => setPaymentReference(e.target.value)}
@@ -359,9 +305,21 @@ export function PosTerminal({
             </div>
           </div>
 
-          <Button className="w-full" size="lg" disabled={isPending || lines.length === 0} onClick={complete}>
-            {isPending ? "Processing…" : "Complete sale"}
-          </Button>
+          {paymentMethod === "mpesa" ? (
+            <MpesaPanel
+              phone={mpesaPhone}
+              setPhone={setMpesaPhone}
+              request={mpesaRequest}
+              isSending={isSendingMpesa}
+              disabled={lines.length === 0}
+              onSend={sendMpesaRequest}
+              onCheckNow={checkMpesaStatus}
+            />
+          ) : (
+            <Button className="w-full" size="lg" disabled={isPending || lines.length === 0} onClick={() => void complete()}>
+              {isPending ? "Processing…" : "Complete sale"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -416,6 +374,75 @@ function CatChip({
     >
       {children}
     </button>
+  )
+}
+
+const PHONE_PATTERN = /^\+254[17]\d{8}$/
+
+function MpesaPanel({
+  phone,
+  setPhone,
+  request,
+  isSending,
+  disabled,
+  onSend,
+  onCheckNow,
+}: {
+  phone: string
+  setPhone: (v: string) => void
+  request: MpesaRequestState | null
+  isSending: boolean
+  disabled: boolean
+  onSend: (phone: string) => Promise<{ ok: boolean; message: string }>
+  onCheckNow: () => Promise<unknown>
+}) {
+  const phoneValid = PHONE_PATTERN.test(phone.trim())
+
+  if (request?.status === "pending") {
+    return (
+      <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-primary" />
+          Waiting for payment on <span className="font-figures">{request.phone}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Ask the customer to check their phone and enter their M-Pesa PIN. The sale completes
+          automatically once confirmed.
+        </p>
+        <Button variant="outline" size="sm" className="w-full" onClick={() => onCheckNow()}>
+          Check now
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {request?.status === "failed" && (
+        <p className="rounded-md bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+          {request.resultDesc || "The last payment request failed. You can try again."}
+        </p>
+      )}
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground">
+          <HugeiconsIcon icon={SmartPhone01Icon} size={16} />
+        </span>
+        <Input
+          placeholder="+2547XXXXXXXX"
+          className="h-8 font-figures text-sm"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+      </div>
+      <Button
+        className="w-full"
+        size="lg"
+        disabled={disabled || isSending || !phoneValid}
+        onClick={() => void onSend(phone.trim())}
+      >
+        {isSending ? "Sending…" : "Send M-Pesa payment request"}
+      </Button>
+    </div>
   )
 }
 

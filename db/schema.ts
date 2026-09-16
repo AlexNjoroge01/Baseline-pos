@@ -28,6 +28,11 @@ export const saleStatusEnum = pgEnum("sale_status", ["completed", "refunded", "v
 export const themeModeEnum = pgEnum("theme_mode", ["light", "dark", "system"])
 export const accentIntensityEnum = pgEnum("accent_intensity", ["soft", "standard", "bold"])
 export const densityEnum = pgEnum("density", ["comfortable", "compact"])
+export const paymentRequestStatusEnum = pgEnum("payment_request_status", [
+  "pending",
+  "completed",
+  "failed",
+])
 
 // ---------------------------------------------------------------------------
 // Users & auth
@@ -170,6 +175,47 @@ export const receipts = pgTable("receipts", {
 })
 
 // ---------------------------------------------------------------------------
+// M-Pesa STK Push payment requests
+//
+// A checkout ("createSale") is only ever written once it's actually paid for.
+// STK Push introduces an async gap between "push sent" and "customer entered
+// PIN on their phone", so we need somewhere to hold that pending state: the
+// quoted amount, the frozen cart snapshot (so a confirmed payment always
+// charges for exactly what was quoted, even if the on-screen cart changes
+// while waiting), and the Daraja correlation ids. `saleId` is set exactly
+// once, when payment is confirmed — never before.
+// ---------------------------------------------------------------------------
+export const paymentRequests = pgTable("payment_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  phone: text("phone").notNull(), // E.164, +2547XXXXXXXX
+  amountCents: integer("amount_cents").notNull(), // server-computed, never client-supplied
+  customerId: uuid("customer_id").references(() => customers.id),
+  discountCents: integer("discount_cents").notNull().default(0),
+  status: paymentRequestStatusEnum("status").notNull().default("pending"),
+  checkoutRequestId: text("checkout_request_id").unique(),
+  merchantRequestId: text("merchant_request_id"),
+  mpesaReceiptNumber: text("mpesa_receipt_number"),
+  resultDesc: text("result_desc"),
+  saleId: uuid("sale_id").references(() => sales.id),
+  initiatedBy: uuid("initiated_by")
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+})
+
+export const paymentRequestItems = pgTable("payment_request_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  paymentRequestId: uuid("payment_request_id")
+    .references(() => paymentRequests.id)
+    .notNull(),
+  productId: uuid("product_id")
+    .references(() => products.id)
+    .notNull(),
+  quantity: integer("quantity").notNull(),
+})
+
+// ---------------------------------------------------------------------------
 // Settings (single row) — shop profile + appearance (Design.md §8)
 // ---------------------------------------------------------------------------
 export const settings = pgTable("settings", {
@@ -265,6 +311,30 @@ export const receiptsRelations = relations(receipts, ({ one }) => ({
   sale: one(sales, { fields: [receipts.saleId], references: [sales.id] }),
 }))
 
+export const paymentRequestsRelations = relations(paymentRequests, ({ one, many }) => ({
+  customer: one(customers, {
+    fields: [paymentRequests.customerId],
+    references: [customers.id],
+  }),
+  sale: one(sales, { fields: [paymentRequests.saleId], references: [sales.id] }),
+  initiatedByUser: one(users, {
+    fields: [paymentRequests.initiatedBy],
+    references: [users.id],
+  }),
+  items: many(paymentRequestItems),
+}))
+
+export const paymentRequestItemsRelations = relations(paymentRequestItems, ({ one }) => ({
+  paymentRequest: one(paymentRequests, {
+    fields: [paymentRequestItems.paymentRequestId],
+    references: [paymentRequests.id],
+  }),
+  product: one(products, {
+    fields: [paymentRequestItems.productId],
+    references: [products.id],
+  }),
+}))
+
 // ---------------------------------------------------------------------------
 // Inferred types
 // ---------------------------------------------------------------------------
@@ -280,7 +350,11 @@ export type Sale = typeof sales.$inferSelect
 export type SaleItem = typeof saleItems.$inferSelect
 export type Receipt = typeof receipts.$inferSelect
 export type Settings = typeof settings.$inferSelect
+export type PaymentRequest = typeof paymentRequests.$inferSelect
+export type NewPaymentRequest = typeof paymentRequests.$inferInsert
+export type PaymentRequestItem = typeof paymentRequestItems.$inferSelect
 export type Role = (typeof roleEnum.enumValues)[number]
 export type Unit = (typeof unitEnum.enumValues)[number]
 export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number]
 export type MovementType = (typeof movementTypeEnum.enumValues)[number]
+export type PaymentRequestStatus = (typeof paymentRequestStatusEnum.enumValues)[number]

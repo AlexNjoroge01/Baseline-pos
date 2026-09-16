@@ -5,8 +5,8 @@ import { eq } from "drizzle-orm"
 
 import { db } from "@/db"
 import { products, inventoryLevels } from "@/db/schema"
-import { productSchema } from "@/lib/validations"
-import { toCents } from "@/lib/money"
+import { productSchema, voiceUpdateProductPriceSchema } from "@/lib/validations"
+import { toCents, fromCents } from "@/lib/money"
 import { ok, fail, parseOr, errorMessage, type ActionResult } from "@/lib/action-result"
 import { requireRole } from "@/lib/auth-session"
 
@@ -76,6 +76,35 @@ export async function updateProduct(id: string, input: unknown): Promise<ActionR
   } catch (e) {
     return fail(friendlyDbError(e))
   }
+}
+
+/**
+ * Voice-friendly price change: fetches the current row and re-runs it through
+ * the exact same `updateProduct` validation/authorization path, changing only
+ * the price. Avoids asking the voice assistant to restate every other field
+ * (SKU, category, tax rate, ...) just to change one number.
+ */
+export async function updateProductPrice(id: string, price: unknown): Promise<ActionResult> {
+  await requireRole("manager")
+  const parsed = parseOr(voiceUpdateProductPriceSchema, { productId: id, price })
+  if (!parsed.success) return parsed.result
+
+  const [current] = await db.select().from(products).where(eq(products.id, id)).limit(1)
+  if (!current) return fail("Product not found.")
+
+  return updateProduct(id, {
+    name: current.name,
+    sku: current.sku,
+    barcode: current.barcode ?? "",
+    categoryId: current.categoryId,
+    unit: current.unit,
+    price: parsed.data.price,
+    costPrice: current.costPriceCents ? String(fromCents(current.costPriceCents)) : "",
+    taxRate: current.taxRate,
+    reorderLevel: current.reorderLevel,
+    imageUrl: current.imageUrl ?? "",
+    isActive: current.isActive,
+  })
 }
 
 /** Soft-delete: products are never hard-deleted so historical sales stay intact. */

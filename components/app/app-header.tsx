@@ -9,6 +9,7 @@ import type { Role } from "@/db/schema"
 import { logout, clearCashierSwitch } from "@/actions/auth"
 import { NAV_ITEMS } from "@/components/app/nav-items"
 import { Sidebar } from "@/components/app/sidebar"
+import { VoiceAssistant } from "@/components/app/voice-assistant"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -66,6 +67,8 @@ export function AppHeader({
       <h1 className="font-display text-lg font-semibold text-foreground">{title}</h1>
 
       <div className="ml-auto flex items-center gap-3">
+        <VoiceAssistant role={user.role} />
+
         {activeCashier && (
           <Badge variant="outline" className="hidden gap-1.5 sm:flex">
             <span className="text-muted-foreground">Till:</span>

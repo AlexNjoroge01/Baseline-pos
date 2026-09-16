@@ -1,14 +1,15 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { eq, sql, inArray } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import { db } from "@/db"
-import { sales, saleItems, products, inventoryLevels, customers } from "@/db/schema"
+import { sales, saleItems, customers } from "@/db/schema"
 import { createSaleSchema } from "@/lib/validations"
 import { ok, fail, parseOr, errorMessage, type ActionResult } from "@/lib/action-result"
 import { getActiveCashier } from "@/lib/auth-session"
 import { adjustStockTx, InsufficientStockError } from "@/lib/inventory-core"
+import { priceCartLines } from "@/lib/pricing"
 import { renderReceiptPdf } from "@/lib/receipt"
 import { sendReceipt } from "@/lib/email"
 import { getSettings } from "@/lib/settings"
@@ -40,44 +41,9 @@ export async function createSale(input: unknown): Promise<ActionResult<CreateSal
 
   try {
     const result = await db.transaction(async (tx) => {
-      // 1. Re-fetch products + inventory for the cart lines.
-      const ids = items.map((i) => i.productId)
-      const rows = await tx
-        .select({
-          id: products.id,
-          name: products.name,
-          priceCents: products.priceCents,
-          taxRate: products.taxRate,
-          isActive: products.isActive,
-          onHand: inventoryLevels.quantityOnHand,
-        })
-        .from(products)
-        .leftJoin(inventoryLevels, eq(inventoryLevels.productId, products.id))
-        .where(inArray(products.id, ids))
-
-      const byId = new Map(rows.map((r) => [r.id, r]))
-
-      // 2. Validate stock + build priced lines.
-      let subtotalCents = 0
-      let taxTotalCents = 0
-      const lines = items.map((line) => {
-        const p = byId.get(line.productId)
-        if (!p || !p.isActive) throw new Error(`Product unavailable in cart.`)
-        if ((p.onHand ?? 0) < line.quantity) {
-          throw new InsufficientStockError(`Insufficient stock for ${p.name}.`)
-        }
-        const lineSubtotal = p.priceCents * line.quantity
-        const lineTax = Math.round((lineSubtotal * Number(p.taxRate)) / 100)
-        subtotalCents += lineSubtotal
-        taxTotalCents += lineTax
-        return {
-          productId: p.id,
-          unitPriceCents: p.priceCents,
-          quantity: line.quantity,
-          lineSubtotalCents: lineSubtotal,
-          lineTaxCents: lineTax,
-        }
-      })
+      // 1-2. Re-price + re-check stock for the cart lines (single choke point,
+      // shared with the M-Pesa STK Push initiator so both paths always agree).
+      const { lines, subtotalCents, taxTotalCents } = await priceCartLines(tx, items)
 
       const cappedDiscount = Math.min(discountCents, subtotalCents + taxTotalCents)
       const grandTotalCents = subtotalCents + taxTotalCents - cappedDiscount
@@ -104,7 +70,16 @@ export async function createSale(input: unknown): Promise<ActionResult<CreateSal
         .returning({ id: sales.id })
 
       // 5. Insert sale items.
-      await tx.insert(saleItems).values(lines.map((l) => ({ ...l, saleId: sale.id })))
+      await tx.insert(saleItems).values(
+        lines.map((l) => ({
+          saleId: sale.id,
+          productId: l.productId,
+          unitPriceCents: l.unitPriceCents,
+          quantity: l.quantity,
+          lineSubtotalCents: l.lineSubtotalCents,
+          lineTaxCents: l.lineTaxCents,
+        }))
+      )
 
       // 6. Decrement inventory + audit rows.
       for (const l of lines) {
